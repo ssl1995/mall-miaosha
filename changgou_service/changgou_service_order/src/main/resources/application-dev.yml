@@ -1,0 +1,63 @@
+server:
+  port: 9002
+spring:
+  application:
+    name: order
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://192.168.200.128:3306/changgou_order?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+    username: root
+    password: root
+  main:
+    allow-bean-definition-overriding: true #当遇到同样名字的时候，是否允许覆盖注册
+  redis:
+    host: 192.168.200.128
+  kafka:
+    bootstrap-servers: 192.168.200.128:9092
+    producer:
+      retries: 10
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ${spring.application.name}-kafka-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    properties:
+      session:
+        timeout:
+          # kafka会有一个心跳线程来同步服务端，告诉服务端自己是正常可用的
+          # 默认是3秒发送一次心跳，超过session.timeout.ms（默认10秒）服务端没有收到心跳就会认为当前消费者失效。会导致重复消费，避免重复消费就修改默认值。
+          ms: 600000 #单位毫秒
+      max:
+        poll:
+          interval:
+            # max.poll.interval.ms决定了获取消息后提交偏移量的最大时间，
+            # 超过设定的时间（默认5分钟），服务端也会认为该消费者失效。会导致重复消费，避免重复消费就修改默认值。
+            ms: 600000 #单位毫秒
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:6868/eureka
+  instance:
+    prefer-ip-address: true
+feign:
+  hystrix:
+    enabled: true
+  client:
+    config:
+      default:   #配置全局的feign的调用超时时间  如果 有指定的服务配置 默认的配置不会生效
+        connectTimeout: 60000 # 指定的是 消费者 连接服务提供者的连接超时时间 是否能连接  单位是毫秒
+        readTimeout: 20000  # 指定的是调用服务提供者的 服务 的超时时间（）  单位是毫秒
+#hystrix 配置
+hystrix:
+  command:
+    default:
+      execution:
+        timeout:
+          #如果enabled设置为false，则请求超时交给ribbon控制
+          enabled: true
+        isolation:
+          strategy: SEMAPHORE
+          thread:
+            # 熔断器超时时间，默认：1000/毫秒
+            timeoutInMilliseconds: 20000
